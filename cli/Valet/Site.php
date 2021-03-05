@@ -418,6 +418,8 @@ class Site
 
         $this->createCertificate($url);
 
+        $this->createHaproxyCert($url);
+
         $this->files->putAsUser(
             $this->nginxPath($url), $this->buildSecureNginxServer($url, $siteConf)
         );
@@ -474,7 +476,6 @@ class Site
         $csrPath = $this->certificatesPath($url, 'csr');
         $crtPath = $this->certificatesPath($url, 'crt');
         $confPath = $this->certificatesPath($url, 'conf');
-
         $this->buildCertificateConf($confPath, $url);
         $this->createPrivateKey($keyPath);
         $this->createSigningRequest($url, $keyPath, $csrPath, $confPath);
@@ -498,6 +499,30 @@ class Site
         }
 
         $this->trustCertificate($crtPath);
+    }
+
+    /**
+     * Create Haproxy Cert.
+     *
+     * @param  string  $url
+     * @return void
+     */
+    function createHaproxyCert($url)
+    {
+        $caPemPath = $this->caPath('LaravelValetCASelfSigned.pem');
+        $caKeyPath = $this->caPath('LaravelValetCASelfSigned.key');
+        $caSrlPath = $this->caPath('LaravelValetCASelfSigned.srl');
+        $keyPath = $this->certificatesPath($url, 'key');
+        $csrPath = $this->certificatesPath($url, 'csr');
+        $crtPath = $this->certificatesPath($url, 'crt');
+        $confPath = $this->certificatesPath($url, 'conf');
+        $haproxyPath = $this->valetHomePath().'/haproxyssl/'.$url.'.pem';
+
+        $this->cli->run(sprintf(
+            'cat "%s" "%s" > "%s"',
+            $keyPath, $crtPath, $haproxyPath
+        ));
+
     }
 
     /**
@@ -573,11 +598,19 @@ class Site
     function buildSecureNginxServer($url, $siteConf = null)
     {
         if ($siteConf === null) {
-            $siteConf = $this->files->get(__DIR__.'/../stubs/secure.valet.conf');
+            $stub = __DIR__.'/../stubs/secure.valet.conf';
+            if (file_exists('/Users/jerryprice/.config/valet/stubs/secure.valet.conf')) {
+                $stub = '/Users/jerryprice/.config/valet/stubs/secure.valet.conf';
+            }
+            $siteConf = $this->files->get($stub);
         }
 
+        // dd( get_object_vars($this), __DIR__, $_SERVER );
+
+        $custom_site = str_replace('.test', '.jjpmann.dev', $url);
+
         return str_replace(
-            ['VALET_HOME_PATH', 'VALET_SERVER_PATH', 'VALET_STATIC_PREFIX', 'VALET_SITE', 'VALET_CERT', 'VALET_KEY'],
+            ['VALET_HOME_PATH', 'VALET_SERVER_PATH', 'VALET_STATIC_PREFIX', 'VALET_SITE', 'VALET_CERT', 'VALET_KEY', 'VALET_CWD', 'CUSTOM_SITE'],
             [
                 $this->valetHomePath(),
                 VALET_SERVER_PATH,
@@ -585,6 +618,8 @@ class Site
                 $url,
                 $this->certificatesPath($url, 'crt'),
                 $this->certificatesPath($url, 'key'),
+                getcwd(),
+                $custom_site,
             ],
             $siteConf
         );

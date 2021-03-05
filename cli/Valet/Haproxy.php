@@ -4,14 +4,14 @@ namespace Valet;
 
 use DomainException;
 
-class Nginx
+class Haproxy
 {
     var $brew;
     var $cli;
     var $files;
     var $configuration;
     var $site;
-    const NGINX_CONF = BREW_PREFIX.'/etc/nginx/nginx.conf';
+    const HAPROXY_CONF = BREW_PREFIX.'/etc/haproxy/haproxy.conf';
 
     /**
      * Create a new Nginx instance.
@@ -40,6 +40,7 @@ class Nginx
      */
     function install()
     {
+        return;
         if (!$this->brew->hasInstalledNginx()) {
             $this->brew->installOrFail('nginx', []);
         }
@@ -56,6 +57,7 @@ class Nginx
      */
     function installConfiguration()
     {
+        return;
         info('Installing nginx configuration...');
 
         $contents = $this->files->get(__DIR__.'/../stubs/nginx.conf');
@@ -73,6 +75,7 @@ class Nginx
      */
     function installServer()
     {
+        return;
         $this->files->ensureDirExists(BREW_PREFIX.'/etc/nginx/valet');
 
         $this->files->putAsUser(
@@ -99,6 +102,7 @@ class Nginx
      */
     function installNginxDirectory()
     {
+        return;
         info('Installing nginx directory...');
 
         if (! $this->files->isDir($nginxDirectory = VALET_HOME_PATH.'/Nginx')) {
@@ -115,6 +119,7 @@ class Nginx
      */
     private function lint()
     {
+        return;
         $this->cli->run(
             'sudo nginx -c '.static::NGINX_CONF.' -t',
             function ($exitCode, $outputMessage) {
@@ -130,6 +135,7 @@ class Nginx
      */
     function rewriteSecureNginxFiles()
     {
+        return;
         $tld = $this->configuration->read()['tld'];
 
         $this->site->resecureForNewTld($tld, $tld);
@@ -144,8 +150,6 @@ class Nginx
     {
         $this->lint();
 
-        $this->brew->restartService($this->brew->nginxServiceName());
-
         $this->brew->restartService('haproxy');
     }
 
@@ -156,9 +160,9 @@ class Nginx
      */
     function stop()
     {
-        info('Stopping nginx...');
+        info('Stopping haproxy...');
 
-        $this->cli->quietly('sudo brew services stop '. $this->brew->nginxServiceName());
+        $this->cli->quietly('sudo brew services stop '. 'haproxy');
     }
 
     /**
@@ -168,6 +172,7 @@ class Nginx
      */
     function uninstall()
     {
+        return;
         $this->brew->stopService(['nginx', 'nginx-full']);
         $this->brew->uninstallFormula('nginx nginx-full');
         $this->cli->quietly('rm -rf '.BREW_PREFIX.'/etc/nginx '.BREW_PREFIX.'/var/log/nginx');
