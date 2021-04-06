@@ -299,6 +299,27 @@ class Site
     }
 
     /**
+     * Get Stub file for securing site
+     *
+     * @return string
+     */
+    function getSiteStub($type = 'site')
+    {
+        $types = [
+            'proxy' => 'proxy.valet.conf',
+            'site' => 'secure.valet.conf',
+        ];
+
+        $filename = isset($types[$type]) ? $types[$type] : $types['site'];
+
+        $default = __DIR__.'/../stubs/'.$filename;
+
+        $custom = VALET_HOME_PATH.'/stubs/'.$filename;
+
+        return file_exists($custom) ? $custom : $default;
+    }
+
+    /**
      * Unlink the given symbolic link.
      *
      * @param  string  $name
@@ -652,20 +673,16 @@ class Site
      */
     function buildSecureNginxServer($url, $siteConf = null)
     {
+
         if ($siteConf === null) {
-
-            $stub = __DIR__.'/../stubs/secure.valet.conf';
-            if (file_exists('/Users/jerryprice/.config/valet/stubs/secure.valet.conf')) {
-                $stub = '/Users/jerryprice/.config/valet/stubs/secure.valet.conf';
-            }
-
-            $siteConf = $this->replaceOldLoopbackWithNew(
-                $this->files->get($stub),
-                'VALET_LOOPBACK',
-                $this->valetLoopback()
-            );
-
+            $siteConf = $this->files->get($this->getSiteStub('site'));
         }
+
+        $siteConf = $this->replaceOldLoopbackWithNew(
+            $siteConf,
+            'VALET_LOOPBACK',
+            $this->valetLoopback()
+        );
 
         $custom_site = str_replace('.test', '.jjpmann.dev', $url);
 
@@ -760,7 +777,7 @@ class Site
         }
 
         $siteConf = $this->replaceOldLoopbackWithNew(
-            $this->files->get(__DIR__.'/../stubs/proxy.valet.conf'),
+            $this->files->get($this->getSiteStub('proxy')),
             'VALET_LOOPBACK',
             $this->valetLoopback()
         );
